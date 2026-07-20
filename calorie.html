@@ -25,12 +25,32 @@
       <h1 class="app-header__title" id="today-label">วันนี้</h1>
     </header>
 
-    <section class="day-summary" aria-live="polite">
+    <section class="day-summary day-summary--compact" aria-live="polite">
       <p class="day-summary__label">แคลอรี่ที่กินวันนี้</p>
       <p class="day-summary__value">
         <span id="today-total">0</span><span class="day-summary__unit">kcal</span>
       </p>
       <p class="day-summary__meta"><span id="today-count">0</span> มื้อ</p>
+      <div class="goal-progress" id="goal-progress" hidden>
+        <div class="goal-progress__header">
+          <span class="goal-progress__goal">เป้า <span id="goal-value">0</span> kcal</span>
+          <span class="goal-progress__status" id="goal-status">—</span>
+        </div>
+        <div
+          class="goal-progress__track"
+          id="goal-progress-track"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          aria-label="ความคืบหน้าเทียบเป้าวันนี้"
+        >
+          <div class="goal-progress__fill" id="goal-progress-fill"></div>
+        </div>
+        <p class="goal-progress__hint">
+          <a href="dashboard.html" class="goal-progress__link">แก้เป้าที่แดชบอร์ด</a>
+        </p>
+      </div>
     </section>
 
     <main class="app-main">
@@ -56,6 +76,11 @@
                 </button>
               </div>
               <p id="ai-hint" class="app-hint" aria-live="polite"></p>
+            </div>
+
+            <div class="app-field">
+              <span class="app-label" id="meal-tag-label">มื้อ</span>
+              <div class="meal-tag-picker" id="meal-tag-picker" role="group" aria-labelledby="meal-tag-label"></div>
             </div>
 
             <div class="app-disclosure">
@@ -127,7 +152,51 @@
       getRange: Meals.getTodayRange,
       metaMode: 'time',
       defaultSort: 'time_desc',
+      onChange(entries, summary) {
+        updateGoalProgress(summary?.total ?? 0);
+      },
     });
+
+    function updateGoalProgress(total) {
+      const goal = Meals.getDailyGoal();
+      const progress = Meals.buildGoalProgress(total, goal);
+      const wrap = document.getElementById('goal-progress');
+      const fill = document.getElementById('goal-progress-fill');
+      const track = document.getElementById('goal-progress-track');
+      const statusEl = document.getElementById('goal-status');
+      const goalValueEl = document.getElementById('goal-value');
+
+      goalValueEl.textContent = goal.toLocaleString('th-TH');
+      wrap.hidden = false;
+      track.setAttribute('aria-valuenow', String(progress.pct));
+      fill.style.width = `${progress.pct}%`;
+      fill.classList.remove('is-near', 'is-over');
+      wrap.classList.remove('is-near', 'is-over');
+
+      if (progress.state === 'empty') {
+        statusEl.textContent = `เหลือ ${goal.toLocaleString('th-TH')} kcal`;
+      } else if (progress.state === 'near') {
+        statusEl.textContent = 'ใกล้เป้าแล้ว';
+        fill.classList.add('is-near');
+        wrap.classList.add('is-near');
+      } else if (progress.state === 'over') {
+        statusEl.textContent = `เกิน +${Math.abs(progress.remaining).toLocaleString('th-TH')} kcal`;
+        fill.classList.add('is-over');
+        wrap.classList.add('is-over');
+        fill.style.width = '100%';
+        track.setAttribute('aria-valuenow', '100');
+      } else {
+        statusEl.textContent = `เหลือ ${progress.remaining.toLocaleString('th-TH')} kcal`;
+      }
+    }
+
+    function initMealTagPicker() {
+      Meals.renderMealTagPicker(
+        document.getElementById('meal-tag-picker'),
+        Meals.inferMealTag(new Date()),
+        'add-meal-tag'
+      );
+    }
 
     function setAiHint(message, type) {
       Meals.setHint(document.getElementById('ai-hint'), message, type);
@@ -211,7 +280,11 @@
       saveBtn.textContent = 'กำลังบันทึก...';
       mealList.status('');
 
-      const payload = { food_name: food, calories: cal };
+      const payload = {
+        food_name: food,
+        calories: cal,
+        meal_tag: Meals.getSelectedMealTag(document.getElementById('meal-tag-picker'), 'add-meal-tag'),
+      };
       if (timeExpanded && timeInput.value) {
         const createdAt = Meals.buildCreatedAtFromTime(timeInput.value);
         if (createdAt) payload.created_at = createdAt;
@@ -228,6 +301,7 @@
       foodInput.value = '';
       calInput.value = '';
       resetTimeField();
+      initMealTagPicker();
       setAiHint('');
       mealList.status('บันทึกมื้อแล้ว', 'is-ok');
       saveBtn.disabled = false;
@@ -245,6 +319,7 @@
     document.getElementById('eaten-time').addEventListener('input', updateTimeToggleLabel);
 
     initLayout({ activeId: 'calorie' });
+    initMealTagPicker();
     Meals.refreshIcons();
     mealList.reload();
 

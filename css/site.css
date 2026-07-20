@@ -241,6 +241,178 @@ button:active:not(:disabled) {
   opacity: 0.92;
 }
 
+.goal-progress {
+  grid-column: 1 / -1;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgb(255 255 255 / 22%);
+}
+
+.goal-progress__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.goal-progress__status {
+  opacity: 0.95;
+}
+
+.goal-progress__track {
+  height: 10px;
+  background: rgb(255 255 255 / 22%);
+  overflow: hidden;
+}
+
+.goal-progress__fill {
+  height: 100%;
+  width: 0;
+  background: var(--color-on-primary);
+  transition: width 240ms var(--ease-out);
+}
+
+.goal-progress.is-near .goal-progress__fill,
+.goal-progress__fill.is-near {
+  background: #fef3c7;
+}
+
+.goal-progress.is-over .goal-progress__fill,
+.goal-progress__fill.is-over {
+  background: #fed7aa;
+}
+
+.goal-progress__hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.goal-progress__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Compact day summary (calorie page) */
+.day-summary--compact {
+  gap: 2px var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+}
+
+.day-summary--compact .day-summary__label {
+  grid-column: 1;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+}
+
+.day-summary--compact .day-summary__value {
+  grid-column: 1 / -1;
+  font-size: 2.125rem;
+  line-height: 1;
+}
+
+.day-summary--compact .day-summary__unit {
+  font-size: 0.9375rem;
+  margin-left: 3px;
+}
+
+.day-summary--compact .day-summary__meta {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  align-self: center;
+  font-size: 0.8125rem;
+}
+
+.day-summary--compact .goal-progress {
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+}
+
+.day-summary--compact .goal-progress__header {
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+}
+
+.day-summary--compact .goal-progress__track {
+  height: 6px;
+}
+
+.day-summary--compact .goal-progress__hint {
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  opacity: 0.8;
+}
+
+/* —— Meal tags —— */
+.meal-tag-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.meal-tag-picker__item {
+  min-width: 0;
+}
+
+.meal-tag-picker__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.meal-tag-picker__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+  background: var(--color-muted);
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out);
+}
+
+.meal-tag-picker__input:checked + .meal-tag-picker__btn {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.meal-tag-picker__input:focus-visible + .meal-tag-picker__btn {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.meal-tag-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+@media (max-width: 360px) {
+  .meal-tag-picker {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* —— Page sections —— */
 .app-panel {
   display: flex;
@@ -380,8 +552,12 @@ button:active:not(:disabled) {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-3);
+}
+
+.kpi-card--streak .kpi-card__value {
+  color: var(--color-accent);
 }
 
 .kpi-card {
@@ -469,6 +645,123 @@ button:active:not(:disabled) {
 .chart-panel .apexcharts-yaxis-label {
   fill: var(--color-text-muted);
   font-family: var(--font-family);
+}
+
+/* —— Tag stats & top foods —— */
+.tag-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tag-stat {
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+}
+
+.tag-stat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.tag-stat__label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.tag-stat__value {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.tag-stat__track {
+  height: 8px;
+  background: var(--color-muted);
+  overflow: hidden;
+}
+
+.tag-stat__fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 240ms var(--ease-out);
+}
+
+.tag-stat__meta {
+  margin: var(--space-2) 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.top-foods-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+.top-foods-col__title {
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.top-foods-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.top-foods-list__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 12px var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.top-foods-list__item:last-child {
+  border-bottom: none;
+}
+
+.top-foods-list__rank {
+  width: 22px;
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.top-foods-list__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-foods-list__meta {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.top-foods-list__empty {
+  padding: var(--space-4);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
 }
 
 .chart-a11y {
@@ -1101,6 +1394,10 @@ button:active:not(:disabled) {
     font-size: 3.75rem;
   }
 
+  .day-summary--compact .day-summary__value {
+    font-size: 2.25rem;
+  }
+
   .app-panel {
     padding-inline: var(--space-5);
   }
@@ -1115,6 +1412,10 @@ button:active:not(:disabled) {
 
   .goal-form__row .app-btn {
     min-width: 130px;
+  }
+
+  .top-foods-grid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -1230,6 +1531,8 @@ button:active:not(:disabled) {
 
   #dash-content > .app-section[aria-labelledby='trend-title'],
   #dash-content > .app-section[aria-labelledby='bar-title'],
+  #dash-content > .app-section[aria-labelledby='tag-title'],
+  #dash-content > .dash-top-foods,
   #dash-content > .app-section:has(.app-cta-link) {
     grid-column: 1 / -1;
   }

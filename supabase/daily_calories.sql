@@ -7,6 +7,7 @@ create table if not exists public.daily_calories (
   id uuid primary key default gen_random_uuid(),
   food_name text not null,
   calories integer not null check (calories >= 0),
+  meal_tag text check (meal_tag is null or meal_tag in ('breakfast', 'lunch', 'dinner', 'snack')),
   created_at timestamptz not null default now()
 );
 

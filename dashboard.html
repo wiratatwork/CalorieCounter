@@ -73,6 +73,31 @@
             <p class="kpi-card__value"><span id="kpi-over">0</span></p>
             <p class="kpi-card__unit">วันในช่วงนี้</p>
           </article>
+          <article class="kpi-card kpi-card--streak">
+            <p class="kpi-card__label">สตรีคบันทึก</p>
+            <p class="kpi-card__value"><span id="kpi-streak">0</span></p>
+            <p class="kpi-card__unit" id="kpi-streak-note">วันติดกัน</p>
+          </article>
+        </section>
+
+        <section class="app-section" aria-labelledby="tag-title">
+          <h2 class="app-section__title" id="tag-title">แคลอรี่ตามมื้อ</h2>
+          <p class="app-section__lead" id="tag-lead">ดูว่ามื้อไหนกินมากที่สุดในช่วงนี้</p>
+          <div class="tag-stats" id="tag-stats"></div>
+        </section>
+
+        <section class="app-section dash-top-foods" aria-labelledby="top-foods-title">
+          <h2 class="app-section__title" id="top-foods-title">เมนูเด่นในช่วงนี้</h2>
+          <div class="top-foods-grid">
+            <div class="top-foods-col">
+              <h3 class="top-foods-col__title">กินบ่อย</h3>
+              <ol class="top-foods-list" id="top-frequent"></ol>
+            </div>
+            <div class="top-foods-col">
+              <h3 class="top-foods-col__title">แคลสูงสุด</h3>
+              <ol class="top-foods-list" id="top-calories"></ol>
+            </div>
+          </div>
         </section>
 
         <section class="app-section" aria-labelledby="trend-title">
@@ -120,21 +145,19 @@
   </div>
 
   <script>
-    const GOAL_KEY = 'calorie_daily_goal';
-    const DEFAULT_GOAL = 2000;
-
     const supabaseClient = Meals.createSupabaseClient();
     let periodDays = 7;
     let dailySeries = [];
+    let periodMeals = [];
+    let streakMeals = [];
     let loadGeneration = 0;
 
     function getGoal() {
-      const saved = parseInt(localStorage.getItem(GOAL_KEY), 10);
-      return !isNaN(saved) && saved >= 800 ? saved : DEFAULT_GOAL;
+      return Meals.getDailyGoal();
     }
 
     function setGoal(value) {
-      localStorage.setItem(GOAL_KEY, String(value));
+      Meals.setDailyGoal(value);
     }
 
     function shortDayLabel(date) {
@@ -184,6 +207,13 @@
         return;
       }
 
+      const topTag = Meals.topMealTagByCalories(periodMeals);
+      if (topTag && topTag.totalCal > goal * 0.35) {
+        banner.classList.add('is-caution');
+        textEl.textContent = `มื้อ${topTag.label}สะสมแคลสูงสุดในช่วงนี้ (${topTag.totalCal.toLocaleString('th-TH')} kcal) — ลองดูจังหวะมื้อนี้เป็นพิเศษ`;
+        return;
+      }
+
       banner.classList.add('is-good');
       textEl.textContent = `เฉลี่ย ${avg.toLocaleString('th-TH')} kcal/วัน ใกล้เป้าพอสมควร เก่งมาก — โฟกัสความสม่ำเสมอดีกว่าการชดเชยวันถัดไป`;
     }
@@ -206,6 +236,62 @@
       else if (Math.abs(delta) <= goal * 0.1) note.textContent = 'ใกล้เป้า';
       else if (delta > 0) note.textContent = `เกิน +${delta.toLocaleString('th-TH')}`;
       else note.textContent = `ต่ำกว่า ${Math.abs(delta).toLocaleString('th-TH')}`;
+    }
+
+    function updateStreak() {
+      const streak = Meals.computeLoggingStreak(streakMeals);
+      document.getElementById('kpi-streak').textContent = String(streak);
+      const note = document.getElementById('kpi-streak-note');
+      note.textContent = streak > 0 ? 'วันติดกัน' : 'เริ่มบันทึกวันนี้';
+    }
+
+    function renderTagStats(meals) {
+      const el = document.getElementById('tag-stats');
+      const stats = Meals.buildMealTagStats(meals);
+      if (!stats.length) {
+        el.innerHTML = '<p class="app-hint">ยังไม่มีข้อมูลแยกตามมื้อ</p>';
+        return;
+      }
+      const maxCal = Math.max(...stats.map((s) => s.totalCal), 1);
+      el.innerHTML = stats
+        .map((s) => {
+          const pct = Math.round((s.totalCal / maxCal) * 100);
+          const avg = Math.round(s.totalCal / s.count);
+          return `
+            <div class="tag-stat">
+              <div class="tag-stat__head">
+                <span class="tag-stat__label">${Meals.escapeHtml(s.label)}</span>
+                <span class="tag-stat__value">${s.totalCal.toLocaleString('th-TH')} kcal</span>
+              </div>
+              <div class="tag-stat__track" aria-hidden="true">
+                <div class="tag-stat__fill" style="width:${pct}%"></div>
+              </div>
+              <p class="tag-stat__meta">${s.count} มื้อ · เฉลี่ย ${avg.toLocaleString('th-TH')} kcal</p>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderTopFoods(meals) {
+      const { byFrequency, byCalories } = Meals.aggregateTopFoods(meals, 5);
+      const freqEl = document.getElementById('top-frequent');
+      const calEl = document.getElementById('top-calories');
+
+      const row = (item, i) => `
+        <li class="top-foods-list__item">
+          <span class="top-foods-list__rank">${i + 1}</span>
+          <span class="top-foods-list__name">${Meals.escapeHtml(item.name)}</span>
+          <span class="top-foods-list__meta">${item.count}× · ${item.totalCal.toLocaleString('th-TH')}</span>
+        </li>
+      `;
+
+      freqEl.innerHTML = byFrequency.length
+        ? byFrequency.map(row).join('')
+        : '<li class="top-foods-list__empty">ยังไม่มีข้อมูล</li>';
+      calEl.innerHTML = byCalories.length
+        ? byCalories.map(row).join('')
+        : '<li class="top-foods-list__empty">ยังไม่มีข้อมูล</li>';
     }
 
     function fillTable(series, goal) {
@@ -247,10 +333,15 @@
 
       const end = Meals.addDays(Meals.startOfDay(new Date()), 1);
       const start = Meals.addDays(end, -periodDays);
+      const streakStart = Meals.addDays(end, -90);
 
       let meals = [];
+      let streakData = [];
       try {
-        meals = await Meals.fetchMealsInRange(supabaseClient, start, end);
+        [meals, streakData] = await Promise.all([
+          Meals.fetchMealsInRange(supabaseClient, start, end),
+          Meals.fetchMealsInRange(supabaseClient, streakStart, end),
+        ]);
       } catch (err) {
         console.error(err);
         if (generation !== loadGeneration) return;
@@ -260,13 +351,18 @@
 
       if (generation !== loadGeneration) return;
 
+      periodMeals = meals;
+      streakMeals = streakData;
       dailySeries = Meals.buildDailySeries(meals, start, end);
       const hasData = dailySeries.some((d) => d.meals > 0);
       document.getElementById('dash-empty').hidden = hasData;
       document.getElementById('dash-content').hidden = !hasData;
 
       updateKpis(dailySeries, goal);
+      updateStreak();
       buildInsight(dailySeries, goal);
+      renderTagStats(periodMeals);
+      renderTopFoods(periodMeals);
       fillTable(dailySeries, goal);
       if (hasData) {
         requestAnimationFrame(() => renderCharts(dailySeries, goal));
@@ -297,6 +393,8 @@
       const goal = getGoal();
       updateKpis(dailySeries, goal);
       buildInsight(dailySeries, goal);
+      renderTagStats(periodMeals);
+      renderTopFoods(periodMeals);
       fillTable(dailySeries, goal);
       renderCharts(dailySeries, goal);
     });

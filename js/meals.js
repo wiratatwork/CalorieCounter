@@ -3,9 +3,125 @@
  */
 (function (global) {
   const TABLE = 'daily_calories';
+  const GOAL_KEY = 'calorie_daily_goal';
+  const DEFAULT_GOAL = 2000;
+
+  const MEAL_TAGS = [
+    { id: 'breakfast', label: 'เช้า' },
+    { id: 'lunch', label: 'กลางวัน' },
+    { id: 'dinner', label: 'เย็น' },
+    { id: 'snack', label: 'ของว่าง' },
+  ];
+
+  function getDailyGoal() {
+    const saved = parseInt(global.localStorage?.getItem(GOAL_KEY), 10);
+    return !isNaN(saved) && saved >= 800 ? saved : DEFAULT_GOAL;
+  }
+
+  function setDailyGoal(value) {
+    global.localStorage?.setItem(GOAL_KEY, String(value));
+  }
+
+  function inferMealTag(isoOrDate) {
+    const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate || Date.now());
+    const h = d.getHours();
+    if (h >= 5 && h < 11) return 'breakfast';
+    if (h >= 11 && h < 15) return 'lunch';
+    if (h >= 17 && h < 22) return 'dinner';
+    return 'snack';
+  }
+
+  function resolveMealTag(item) {
+    const tag = item?.meal_tag;
+    if (tag && MEAL_TAGS.some((t) => t.id === tag)) return tag;
+    return inferMealTag(item?.created_at);
+  }
+
+  function getMealTagLabel(tagId) {
+    return MEAL_TAGS.find((t) => t.id === tagId)?.label || 'มื้อ';
+  }
+
+  function buildGoalProgress(total, goal) {
+    const safeGoal = Math.max(goal, 1);
+    const pct = Math.min(100, Math.round((total / safeGoal) * 100));
+    const remaining = goal - total;
+    let state = 'under';
+    if (total <= 0) state = 'empty';
+    else if (total > goal * 1.1) state = 'over';
+    else if (Math.abs(remaining) <= goal * 0.1) state = 'near';
+    return { total, goal, pct, remaining, state };
+  }
+
+  function computeLoggingStreak(meals) {
+    const daysWithMeals = new Set();
+    for (const item of meals) {
+      daysWithMeals.add(dateKeyLocal(new Date(item.created_at)));
+    }
+    if (!daysWithMeals.size) return 0;
+
+    let streak = 0;
+    for (let d = startOfDay(new Date()); ; d = addDays(d, -1)) {
+      const key = dateKeyLocal(d);
+      if (daysWithMeals.has(key)) streak += 1;
+      else break;
+    }
+    return streak;
+  }
+
+  function aggregateTopFoods(meals, limit = 5) {
+    const byName = new Map();
+    for (const item of meals) {
+      const name = String(item.food_name || '').trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      const row = byName.get(key) || { name, count: 0, totalCal: 0 };
+      row.count += 1;
+      row.totalCal += Number(item.calories) || 0;
+      byName.set(key, row);
+    }
+    const rows = [...byName.values()];
+    const byFrequency = [...rows].sort((a, b) => b.count - a.count || b.totalCal - a.totalCal).slice(0, limit);
+    const byCalories = [...rows].sort((a, b) => b.totalCal - a.totalCal || b.count - a.count).slice(0, limit);
+    return { byFrequency, byCalories };
+  }
+
+  function buildMealTagStats(meals) {
+    const stats = Object.fromEntries(MEAL_TAGS.map((t) => [t.id, { tag: t.id, label: t.label, count: 0, totalCal: 0 }]));
+    for (const item of meals) {
+      const tag = resolveMealTag(item);
+      if (!stats[tag]) continue;
+      stats[tag].count += 1;
+      stats[tag].totalCal += Number(item.calories) || 0;
+    }
+    return MEAL_TAGS.map((t) => stats[t.id]).filter((s) => s.count > 0);
+  }
+
+  function topMealTagByCalories(meals) {
+    const stats = buildMealTagStats(meals);
+    if (!stats.length) return null;
+    return [...stats].sort((a, b) => b.totalCal - a.totalCal)[0];
+  }
 
   function refreshIcons() {
     if (global.lucide) global.lucide.createIcons();
+  }
+
+  function renderMealTagPicker(container, selectedTag, name = 'meal-tag') {
+    if (!container) return;
+    container.innerHTML = MEAL_TAGS.map(
+      (t) => `
+        <label class="meal-tag-picker__item">
+          <input type="radio" name="${escapeHtml(name)}" value="${t.id}" class="meal-tag-picker__input" ${t.id === selectedTag ? 'checked' : ''}>
+          <span class="meal-tag-picker__btn">${escapeHtml(t.label)}</span>
+        </label>
+      `
+    ).join('');
+  }
+
+  function getSelectedMealTag(container, name = 'meal-tag') {
+    if (!container) return inferMealTag(new Date());
+    const checked = container.querySelector(`input[name="${name}"]:checked`);
+    return checked?.value || inferMealTag(new Date());
   }
 
   function escapeHtml(text) {
@@ -178,6 +294,10 @@
           <label class="app-label" for="edit-time">เวลาที่กิน</label>
           <input id="edit-time" class="app-input" type="time" required>
         </div>
+        <div class="app-field">
+          <span class="app-label" id="edit-tag-label">มื้อ</span>
+          <div class="meal-tag-picker" role="group" aria-labelledby="edit-tag-label" id="edit-tag-picker"></div>
+        </div>
         <p id="edit-hint" class="app-hint" aria-live="polite"></p>
         <div class="app-dialog__footer app-dialog__footer--flush">
           <button type="button" id="edit-cancel-btn" class="app-btn app-btn--ghost">ยกเลิก</button>
@@ -251,6 +371,7 @@
       const total = state.entries.reduce((sum, item) => sum + (Number(item.calories) || 0), 0);
       if (totalEl) totalEl.textContent = total.toLocaleString('th-TH');
       if (countEl) countEl.textContent = String(state.entries.length);
+      return { total, count: state.entries.length };
     }
 
     function render() {
@@ -267,6 +388,8 @@
       emptyEl.hidden = true;
       listEl.innerHTML = sorted
         .map((item, index) => {
+          const tag = resolveMealTag(item);
+          const tagLabel = getMealTagLabel(tag);
           const meta =
             state.metaMode === 'datetime'
               ? formatDateTime(item.created_at)
@@ -277,7 +400,10 @@
           <span class="app-list-item__index" aria-hidden="true">${index + 1}</span>
           <div class="app-list-item__body">
             <span class="app-list-item__name">${escapeHtml(item.food_name)}</span>
-            <span class="app-list-item__time">${meta}</span>
+            <span class="app-list-item__time">
+              <span class="meal-tag-badge">${escapeHtml(tagLabel)}</span>
+              ${meta}
+            </span>
           </div>
           <span class="app-list-item__cal">${Number(item.calories).toLocaleString('th-TH')}</span>
           <div class="app-list-item__actions">
@@ -316,7 +442,7 @@
 
       state.entries = data || [];
       render();
-      if (typeof options.onChange === 'function') options.onChange(state.entries);
+      if (typeof options.onChange === 'function') options.onChange(state.entries, updateSummary());
     }
 
     function findEntry(id) {
@@ -332,6 +458,7 @@
       document.getElementById('edit-cal').value = String(item.calories ?? '');
       document.getElementById('edit-date').value = isoToDateValue(item.created_at);
       document.getElementById('edit-time').value = isoToTimeValue(item.created_at);
+      renderMealTagPicker(document.getElementById('edit-tag-picker'), resolveMealTag(item), 'edit-meal-tag');
       editHint('');
       editDialog().showModal();
       refreshIcons();
@@ -387,14 +514,21 @@
     }
 
     async function applyEdit(payload) {
-      const { error } = await options.supabaseClient
+      let updatePayload = {
+        food_name: payload.food_name,
+        calories: payload.calories,
+        created_at: payload.created_at,
+        meal_tag: payload.meal_tag,
+      };
+      let { error } = await options.supabaseClient
         .from(TABLE)
-        .update({
-          food_name: payload.food_name,
-          calories: payload.calories,
-          created_at: payload.created_at,
-        })
+        .update(updatePayload)
         .eq('id', payload.id);
+
+      if (error && updatePayload.meal_tag) {
+        const { meal_tag, ...fallback } = updatePayload;
+        ({ error } = await options.supabaseClient.from(TABLE).update(fallback).eq('id', payload.id));
+      }
 
       if (error) {
         console.error(error);
@@ -410,7 +544,11 @@
     }
 
     async function insert(payload) {
-      const { error } = await options.supabaseClient.from(TABLE).insert(payload);
+      let { error } = await options.supabaseClient.from(TABLE).insert(payload);
+      if (error && payload.meal_tag) {
+        const { meal_tag, ...fallback } = payload;
+        ({ error } = await options.supabaseClient.from(TABLE).insert(fallback));
+      }
       if (error) {
         console.error(error);
         return { ok: false, error };
@@ -458,10 +596,12 @@
           return;
         }
 
+        const mealTag = getSelectedMealTag(document.getElementById('edit-tag-picker'), 'edit-meal-tag');
+
         openConfirm({
           mode: 'edit',
           title: 'ยืนยันการแก้ไข?',
-          message: `บันทึกการแก้ไข “${food}” เป็น ${cal.toLocaleString('th-TH')} kcal วันที่ ${date} เวลา ${time} หรือไม่`,
+          message: `บันทึกการแก้ไข “${food}” เป็น ${cal.toLocaleString('th-TH')} kcal (${getMealTagLabel(mealTag)}) หรือไม่`,
           okLabel: 'ยืนยันแก้ไข',
           danger: false,
           payload: {
@@ -469,6 +609,7 @@
             food_name: food,
             calories: cal,
             created_at: createdAt,
+            meal_tag: mealTag,
           },
         });
       });
@@ -590,6 +731,19 @@
     fetchMealsInRange,
     estimateCalories,
     buildDailySeries,
+    getDailyGoal,
+    setDailyGoal,
+    MEAL_TAGS,
+    inferMealTag,
+    resolveMealTag,
+    getMealTagLabel,
+    renderMealTagPicker,
+    getSelectedMealTag,
+    buildGoalProgress,
+    computeLoggingStreak,
+    aggregateTopFoods,
+    buildMealTagStats,
+    topMealTagByCalories,
     startOfDay,
     addDays,
     escapeHtml,

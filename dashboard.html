@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>แดชบอร์ด - Calorie Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#059669">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js/config.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/meals.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <p class="app-header__eyebrow">ดูแนวโน้มเพื่อกินพอดี</p>
+      <h1 class="app-header__title">แดชบอร์ด</h1>
+    </header>
+
+    <section id="insight-banner" class="insight-banner" aria-live="polite">
+      <p class="insight-banner__label">คำแนะนำวันนี้</p>
+      <p class="insight-banner__text" id="insight-text">กำลังโหลดแนวโน้ม…</p>
+    </section>
+
+    <main class="app-main">
+      <div class="app-panel">
+        <section class="app-section">
+          <div class="period-tabs" role="tablist" aria-label="ช่วงเวลาย้อนหลัง">
+            <button type="button" class="period-tabs__btn is-active" data-days="7" role="tab" aria-selected="true">7 วัน</button>
+            <button type="button" class="period-tabs__btn" data-days="14" role="tab" aria-selected="false">14 วัน</button>
+            <button type="button" class="period-tabs__btn" data-days="30" role="tab" aria-selected="false">30 วัน</button>
+          </div>
+        </section>
+
+        <div id="dash-content">
+        <section class="app-section" aria-labelledby="goal-title">
+          <h2 class="app-section__title" id="goal-title">เป้าต่อวัน</h2>
+          <form class="goal-form" id="goal-form">
+            <div class="app-field">
+              <label class="app-label" for="daily-goal">แคลอรี่เป้าหมาย (kcal)</label>
+              <div class="goal-form__row">
+                <input id="daily-goal" class="app-input" type="number" min="800" max="6000" step="50" inputmode="numeric" required>
+                <button type="submit" class="app-btn">บันทึกเป้า</button>
+              </div>
+              <p class="app-hint">เส้นประในกราฟคือเป้านี้ — กินใกล้เป้าดีกว่าเกินหรือขาดมาก</p>
+            </div>
+          </form>
+        </section>
+
+        <section class="kpi-grid" aria-label="สรุปตัวเลข">
+          <article class="kpi-card">
+            <p class="kpi-card__label">เฉลี่ย/วัน</p>
+            <p class="kpi-card__value"><span id="kpi-avg">0</span></p>
+            <p class="kpi-card__unit">kcal</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__label">วันนี้</p>
+            <p class="kpi-card__value"><span id="kpi-today">0</span></p>
+            <p class="kpi-card__unit" id="kpi-today-note">vs เป้า</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__label">วันเกินเป้า</p>
+            <p class="kpi-card__value"><span id="kpi-over">0</span></p>
+            <p class="kpi-card__unit">วันในช่วงนี้</p>
+          </article>
+        </section>
+
+        <section class="app-section" aria-labelledby="trend-title">
+          <h2 class="app-section__title" id="trend-title">แนวโน้มแคลอรี่รายวัน</h2>
+          <p class="app-section__lead">เส้นทึบ = ที่กินจริง · เส้นประ = เป้า</p>
+          <div class="chart-panel">
+            <canvas id="trend-chart" aria-label="กราฟแนวโน้มแคลอรี่รายวัน" role="img"></canvas>
+          </div>
+          <details class="chart-a11y">
+            <summary>ดูตารางข้อมูล</summary>
+            <div class="chart-a11y__table-wrap">
+              <table class="data-table" id="trend-table">
+                <thead>
+                  <tr><th scope="col">วันที่</th><th scope="col">kcal</th><th scope="col">มื้อ</th><th scope="col">เทียบเป้า</th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+
+        <section class="app-section" aria-labelledby="bar-title">
+          <h2 class="app-section__title" id="bar-title">เปรียบเทียบรายวัน</h2>
+          <p class="app-section__lead">แท่งเขียว = ไม่เกินเป้า · แท่งส้ม = เกินเป้า</p>
+          <div class="chart-panel">
+            <canvas id="bar-chart" aria-label="กราฟแท่งแคลอรี่รายวัน" role="img"></canvas>
+          </div>
+        </section>
+
+        <section class="app-section">
+          <a href="calorie.html" class="app-btn app-cta-link">ไปบันทึกมื้อวันนี้</a>
+        </section>
+        </div>
+
+        <div id="dash-empty" class="app-empty" hidden>
+          <i data-lucide="line-chart" class="app-empty__icon" aria-hidden="true"></i>
+          <p class="app-empty__title">ยังไม่มีข้อมูลพอสร้างแนวโน้ม</p>
+          <p class="app-empty__text">บันทึกมื้ออาหารสัก 2–3 วันแล้วกลับมาดูกราฟได้</p>
+          <a href="calorie.html" class="app-btn" style="margin-top: 8px; max-width: 240px;">บันทึกมื้อแรก</a>
+        </div>
+      </div>
+    </main>
+
+    <div id="bottom-nav"></div>
+  </div>
+
+  <script>
+    const GOAL_KEY = 'calorie_daily_goal';
+    const DEFAULT_GOAL = 2000;
+
+    const supabaseClient = Meals.createSupabaseClient();
+    let periodDays = 7;
+    let dailySeries = [];
+    let trendChart = null;
+    let barChart = null;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function getGoal() {
+      const saved = parseInt(localStorage.getItem(GOAL_KEY), 10);
+      return !isNaN(saved) && saved >= 800 ? saved : DEFAULT_GOAL;
+    }
+
+    function setGoal(value) {
+      localStorage.setItem(GOAL_KEY, String(value));
+    }
+
+    function shortDayLabel(date) {
+      return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+    }
+
+    function buildInsight(series, goal) {
+      const banner = document.getElementById('insight-banner');
+      const textEl = document.getElementById('insight-text');
+      const withFood = series.filter((d) => d.meals > 0);
+      const today = series[series.length - 1];
+      const avg = withFood.length
+        ? Math.round(withFood.reduce((s, d) => s + d.calories, 0) / withFood.length)
+        : 0;
+      const overDays = withFood.filter((d) => d.calories > goal).length;
+      const underDays = withFood.filter((d) => d.calories > 0 && d.calories < goal * 0.75).length;
+
+      banner.classList.remove('is-good', 'is-warn', 'is-caution');
+
+      if (!withFood.length) {
+        textEl.textContent = 'ยังไม่มีบันทึกในช่วงนี้ — เริ่มจากมื้อถัดไป แล้วแดชบอร์ดจะช่วยให้เห็นจังหวะการกินของคุณ';
+        return;
+      }
+
+      const todayDelta = today.calories - goal;
+      if (today.meals > 0 && Math.abs(todayDelta) <= goal * 0.1) {
+        banner.classList.add('is-good');
+        textEl.textContent = `วันนี้ใกล้เป้าดีมาก (${today.calories.toLocaleString('th-TH')} / ${goal.toLocaleString('th-TH')} kcal) — รักษาระดับพอดีแบบนี้ต่อ`;
+        return;
+      }
+
+      if (overDays >= Math.ceil(withFood.length * 0.4)) {
+        banner.classList.add('is-warn');
+        textEl.textContent = `ช่วงนี้เกินเป้า ${overDays} วันจาก ${withFood.length} วันที่บันทึก ลองลดของทอด/หวานในมื้อต่อไปนิดหน่อย`;
+        return;
+      }
+
+      if (avg > goal * 1.1) {
+        banner.classList.add('is-caution');
+        textEl.textContent = `เฉลี่ย ${avg.toLocaleString('th-TH')} kcal/วัน สูงกว่าเป้าเล็กน้อย — ตั้งใจเลือกมื้อหลักให้โปรตีนอิ่มท้อง จะช่วยคุมได้`;
+        return;
+      }
+
+      if (underDays >= 3 && avg < goal * 0.8) {
+        banner.classList.add('is-caution');
+        textEl.textContent = `หลายวันกินน้อยกว่าเป้ามาก อย่าอดเกินไป — กินพอดีช่วยควบคุมน้ำหนักยั่งยืนกว่าอด`;
+        return;
+      }
+
+      banner.classList.add('is-good');
+      textEl.textContent = `เฉลี่ย ${avg.toLocaleString('th-TH')} kcal/วัน ใกล้เป้าพอสมควร เก่งมาก — โฟกัสความสม่ำเสมอดีกว่าการชดเชยวันถัดไป`;
+    }
+
+    function updateKpis(series, goal) {
+      const withFood = series.filter((d) => d.meals > 0);
+      const avg = withFood.length
+        ? Math.round(withFood.reduce((s, d) => s + d.calories, 0) / withFood.length)
+        : 0;
+      const today = series[series.length - 1]?.calories || 0;
+      const over = withFood.filter((d) => d.calories > goal).length;
+      const delta = today - goal;
+
+      document.getElementById('kpi-avg').textContent = avg.toLocaleString('th-TH');
+      document.getElementById('kpi-today').textContent = today.toLocaleString('th-TH');
+      document.getElementById('kpi-over').textContent = String(over);
+
+      const note = document.getElementById('kpi-today-note');
+      if (!today) note.textContent = 'ยังไม่บันทึก';
+      else if (Math.abs(delta) <= goal * 0.1) note.textContent = 'ใกล้เป้า';
+      else if (delta > 0) note.textContent = `เกิน +${delta.toLocaleString('th-TH')}`;
+      else note.textContent = `ต่ำกว่า ${Math.abs(delta).toLocaleString('th-TH')}`;
+    }
+
+    function fillTable(series, goal) {
+      const tbody = document.querySelector('#trend-table tbody');
+      tbody.innerHTML = series
+        .map((d) => {
+          const diff = d.calories - goal;
+          let vs = '—';
+          if (d.meals) {
+            if (Math.abs(diff) <= goal * 0.1) vs = 'ใกล้เป้า';
+            else if (diff > 0) vs = `เกิน +${diff.toLocaleString('th-TH')}`;
+            else vs = `ต่ำ ${Math.abs(diff).toLocaleString('th-TH')}`;
+          }
+          return `<tr>
+            <td>${shortDayLabel(d.date)}</td>
+            <td>${d.calories.toLocaleString('th-TH')}</td>
+            <td>${d.meals}</td>
+            <td>${vs}</td>
+          </tr>`;
+        })
+        .join('');
+    }
+
+    function chartDefaults() {
+      Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+      Chart.defaults.color = '#475569';
+      Chart.defaults.animation = reduceMotion ? false : { duration: 360, easing: 'easeOutQuart' };
+    }
+
+    function renderTrendChart(series, goal) {
+      const labels = series.map((d) => shortDayLabel(d.date));
+      const values = series.map((d) => d.calories);
+      const goals = series.map(() => goal);
+      const ctx = document.getElementById('trend-chart');
+
+      if (trendChart) trendChart.destroy();
+
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'ที่กิน (kcal)',
+              data: values,
+              borderColor: '#059669',
+              backgroundColor: 'rgba(5, 150, 105, 0.16)',
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: '#059669',
+            },
+            {
+              label: 'เป้า (เส้นประ)',
+              data: goals,
+              borderColor: '#d97706',
+              borderWidth: 2,
+              borderDash: [6, 5],
+              fill: false,
+              pointRadius: 0,
+              pointHoverRadius: 0,
+              tension: 0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 12, usePointStyle: true, padding: 16 },
+            },
+            tooltip: {
+              callbacks: {
+                afterBody(items) {
+                  const i = items[0]?.dataIndex;
+                  if (i == null) return '';
+                  const day = series[i];
+                  return `มื้อ ${day.meals} · เป้า ${goal.toLocaleString('th-TH')}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { maxRotation: 0, autoSkipPadding: 8 },
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#e1f2ed' },
+              ticks: {
+                callback: (v) => Number(v).toLocaleString('th-TH'),
+              },
+            },
+          },
+        },
+      });
+    }
+
+    function renderBarChart(series, goal) {
+      const recent = series.slice(-Math.min(14, series.length));
+      const labels = recent.map((d) => shortDayLabel(d.date));
+      const values = recent.map((d) => d.calories);
+      const colors = recent.map((d) =>
+        d.calories > goal ? '#d97706' : '#10b981'
+      );
+      const ctx = document.getElementById('bar-chart');
+
+      if (barChart) barChart.destroy();
+
+      barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'kcal / วัน',
+              data: values,
+              backgroundColor: colors,
+              borderWidth: 0,
+              borderSkipped: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = ctx.parsed.y || 0;
+                  const mark = v > goal ? ' (เกินเป้า)' : ' (ไม่เกินเป้า)';
+                  return `${v.toLocaleString('th-TH')} kcal${v ? mark : ''}`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#e1f2ed' },
+              ticks: { callback: (v) => Number(v).toLocaleString('th-TH') },
+            },
+          },
+        },
+      });
+    }
+
+    async function loadDashboard() {
+      const goal = getGoal();
+      document.getElementById('daily-goal').value = String(goal);
+
+      const end = Meals.addDays(Meals.startOfDay(new Date()), 1);
+      const start = Meals.addDays(end, -periodDays);
+
+      let meals = [];
+      try {
+        meals = await Meals.fetchMealsInRange(supabaseClient, start, end);
+      } catch (err) {
+        console.error(err);
+        document.getElementById('insight-text').textContent = 'โหลดข้อมูลไม่สำเร็จ ลองรีเฟรชอีกครั้ง';
+        return;
+      }
+
+      dailySeries = Meals.buildDailySeries(meals, start, end);
+      const hasData = dailySeries.some((d) => d.meals > 0);
+      document.getElementById('dash-empty').hidden = hasData;
+      document.getElementById('dash-content').hidden = !hasData;
+
+      updateKpis(dailySeries, goal);
+      buildInsight(dailySeries, goal);
+      fillTable(dailySeries, goal);
+      if (hasData) {
+        renderTrendChart(dailySeries, goal);
+        renderBarChart(dailySeries, goal);
+      } else if (trendChart) {
+        trendChart.destroy();
+        trendChart = null;
+        if (barChart) {
+          barChart.destroy();
+          barChart = null;
+        }
+      }
+      Meals.refreshIcons();
+    }
+
+    document.querySelectorAll('.period-tabs__btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.period-tabs__btn').forEach((b) => {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-selected', 'true');
+        periodDays = parseInt(btn.dataset.days, 10);
+        loadDashboard();
+      });
+    });
+
+    document.getElementById('goal-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const value = parseInt(document.getElementById('daily-goal').value, 10);
+      if (isNaN(value) || value < 800) return;
+      setGoal(value);
+      const goal = getGoal();
+      updateKpis(dailySeries, goal);
+      buildInsight(dailySeries, goal);
+      fillTable(dailySeries, goal);
+      renderTrendChart(dailySeries, goal);
+      renderBarChart(dailySeries, goal);
+    });
+
+    chartDefaults();
+    initLayout({ activeId: 'dashboard' });
+    Meals.refreshIcons();
+    loadDashboard();
+  </script>
+</body>
+</html>

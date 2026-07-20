@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>บันทึกวันนี้ - Calorie Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#059669">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js/config.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/meals.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <p class="app-header__eyebrow">บันทึกมื้ออาหาร</p>
+      <h1 class="app-header__title" id="today-label">วันนี้</h1>
+    </header>
+
+    <section class="day-summary" aria-live="polite">
+      <p class="day-summary__label">แคลอรี่ที่กินวันนี้</p>
+      <p class="day-summary__value">
+        <span id="today-total">0</span><span class="day-summary__unit">kcal</span>
+      </p>
+      <p class="day-summary__meta"><span id="today-count">0</span> มื้อ</p>
+    </section>
+
+    <main class="app-main">
+      <div class="app-panel">
+        <section class="app-section" aria-labelledby="add-title">
+          <h2 class="app-section__title" id="add-title">เพิ่มมื้ออาหาร</h2>
+          <p class="app-section__lead">พิมพ์ชื่อเมนู แล้วให้ AI ประมาณแคลอรี่หรือกรอกเอง</p>
+
+          <form class="app-form" id="entry-form" autocomplete="off">
+            <div class="app-field">
+              <label class="app-label" for="food">ชื่อเมนู</label>
+              <input id="food" class="app-input" type="text" placeholder="เช่น ข้าวผัดกุ้ง" required enterkeyhint="next" autocomplete="off">
+            </div>
+
+            <div class="app-field">
+              <label class="app-label" for="cal">แคลอรี่ (kcal)</label>
+              <div class="app-cal-row">
+                <input id="cal" class="app-input" type="number" placeholder="0" required min="0" inputmode="numeric" enterkeyhint="done">
+                <button type="button" id="ai-cal-btn" class="app-btn app-btn--ai" aria-label="AI คำนวณแคลอรี่จากชื่อเมนู">
+                  <i data-lucide="sparkles" class="app-btn__icon" aria-hidden="true"></i>
+                  <span class="app-btn__text-full">AI คำนวณ</span>
+                  <span class="app-btn__text-short">AI</span>
+                </button>
+              </div>
+              <p id="ai-hint" class="app-hint" aria-live="polite"></p>
+            </div>
+
+            <div class="app-disclosure">
+              <button
+                type="button"
+                id="time-toggle"
+                class="app-disclosure__toggle"
+                aria-expanded="false"
+                aria-controls="time-panel"
+              >
+                <span class="app-disclosure__lead">
+                  <i data-lucide="clock" class="app-disclosure__icon" aria-hidden="true"></i>
+                  <span id="time-toggle-label">ระบุเวลาที่กิน</span>
+                  <span class="app-disclosure__optional">ไม่บังคับ</span>
+                </span>
+                <i data-lucide="chevron-down" class="app-disclosure__chevron" aria-hidden="true"></i>
+              </button>
+              <div id="time-panel" class="app-disclosure__panel" hidden>
+                <div class="app-disclosure__inner">
+                  <div class="app-field">
+                    <label class="app-label" for="eaten-time">เวลาที่กิน</label>
+                    <input id="eaten-time" class="app-input" type="time" enterkeyhint="done">
+                    <p class="app-hint">เว้นว่างไว้จะใช้เวลาตอนบันทึก</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="save-btn" class="app-btn">บันทึกลงวันนี้</button>
+            <p id="form-hint" class="app-hint" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="app-section" aria-labelledby="list-title">
+          <div class="list-toolbar">
+            <h2 class="app-section__title" id="list-title">มื้อวันนี้</h2>
+            <div class="sort-control">
+              <label class="sort-control__label" for="sort-by">เรียง</label>
+              <select id="sort-by" class="sort-control__select" aria-label="เรียงลำดับมื้อวันนี้">
+                <option value="time_desc" selected>เวลาใหม่ → เก่า</option>
+                <option value="time_asc">เวลาเก่า → ใหม่</option>
+                <option value="cal_desc">แคลอรี่มาก → น้อย</option>
+                <option value="cal_asc">แคลอรี่น้อย → มาก</option>
+              </select>
+            </div>
+          </div>
+          <div id="list" class="app-list" aria-live="polite"></div>
+          <div id="empty-state" class="app-empty" hidden>
+            <i data-lucide="utensils" class="app-empty__icon" aria-hidden="true"></i>
+            <p class="app-empty__title">ยังไม่มีมื้อวันนี้</p>
+            <p class="app-empty__text">บันทึกมื้อแรกด้านบน เพื่อติดตามแคลอรี่ของวันนี้</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div id="bottom-nav"></div>
+  </div>
+
+  <script>
+    const supabaseClient = Meals.createSupabaseClient();
+    const mealList = Meals.createMealList({
+      supabaseClient,
+      listEl: '#list',
+      emptyEl: '#empty-state',
+      sortEl: '#sort-by',
+      statusEl: '#form-hint',
+      summary: { totalEl: '#today-total', countEl: '#today-count' },
+      getRange: Meals.getTodayRange,
+      metaMode: 'time',
+      defaultSort: 'time_desc',
+    });
+
+    function setAiHint(message, type) {
+      Meals.setHint(document.getElementById('ai-hint'), message, type);
+    }
+
+    async function handleAiCalorie() {
+      const foodInput = document.getElementById('food');
+      const calInput = document.getElementById('cal');
+      const btn = document.getElementById('ai-cal-btn');
+      const food = foodInput.value.trim();
+
+      if (!window.APP_CONFIG?.supabaseUrl || !window.APP_CONFIG?.supabaseAnonKey) {
+        setAiHint('ยังไม่ได้ตั้งค่า Supabase ใน .env / config', 'is-error');
+        return;
+      }
+      if (!food) {
+        setAiHint('กรอกชื่อเมนูก่อน', 'is-error');
+        foodInput.focus();
+        return;
+      }
+
+      btn.disabled = true;
+      setAiHint('กำลังคำนวณด้วย AI...');
+      try {
+        const calories = await Meals.estimateCalories(supabaseClient, food);
+        calInput.value = String(calories);
+        setAiHint(`ประมาณ ${calories.toLocaleString('th-TH')} kcal — แก้ได้ก่อนบันทึก`, 'is-ok');
+        calInput.focus();
+      } catch (err) {
+        console.error(err);
+        setAiHint('คำนวณไม่สำเร็จ ตรวจว่า deploy Edge Function แล้วหรือยัง', 'is-error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function updateTimeToggleLabel() {
+      const timeInput = document.getElementById('eaten-time');
+      const label = document.getElementById('time-toggle-label');
+      const expanded = document.getElementById('time-toggle').getAttribute('aria-expanded') === 'true';
+      const value = timeInput.value;
+      if (value) label.textContent = `เวลาที่กิน · ${value}`;
+      else if (expanded) label.textContent = 'เลือกเวลาที่กิน';
+      else label.textContent = 'ระบุเวลาที่กิน';
+    }
+
+    function setTimeExpanded(expanded) {
+      const toggle = document.getElementById('time-toggle');
+      const panel = document.getElementById('time-panel');
+      const timeInput = document.getElementById('eaten-time');
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      panel.hidden = !expanded;
+      panel.classList.toggle('is-open', expanded);
+      if (expanded && !timeInput.value) timeInput.value = Meals.currentTimeValue();
+      updateTimeToggleLabel();
+      Meals.refreshIcons();
+      if (expanded) requestAnimationFrame(() => timeInput.focus());
+    }
+
+    function resetTimeField() {
+      document.getElementById('eaten-time').value = '';
+      setTimeExpanded(false);
+    }
+
+    async function addEntry(event) {
+      event.preventDefault();
+      const foodInput = document.getElementById('food');
+      const calInput = document.getElementById('cal');
+      const timeInput = document.getElementById('eaten-time');
+      const timeExpanded = document.getElementById('time-toggle').getAttribute('aria-expanded') === 'true';
+      const saveBtn = document.getElementById('save-btn');
+      const food = foodInput.value.trim();
+      const cal = parseInt(calInput.value, 10);
+
+      if (!food || isNaN(cal)) {
+        mealList.status('กรอกชื่อเมนูและแคลอรี่ให้ครบ', 'is-error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'กำลังบันทึก...';
+      mealList.status('');
+
+      const payload = { food_name: food, calories: cal };
+      if (timeExpanded && timeInput.value) {
+        const createdAt = Meals.buildCreatedAtFromTime(timeInput.value);
+        if (createdAt) payload.created_at = createdAt;
+      }
+
+      const result = await mealList.insert(payload);
+      if (!result.ok) {
+        mealList.status('บันทึกไม่สำเร็จ ลองอีกครั้ง', 'is-error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'บันทึกลงวันนี้';
+        return;
+      }
+
+      foodInput.value = '';
+      calInput.value = '';
+      resetTimeField();
+      setAiHint('');
+      mealList.status('บันทึกมื้อแล้ว', 'is-ok');
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'บันทึกลงวันนี้';
+      foodInput.focus();
+    }
+
+    document.getElementById('today-label').textContent = Meals.formatThaiDate(new Date());
+    document.getElementById('entry-form').addEventListener('submit', addEntry);
+    document.getElementById('ai-cal-btn').addEventListener('click', handleAiCalorie);
+    document.getElementById('time-toggle').addEventListener('click', () => {
+      const expanded = document.getElementById('time-toggle').getAttribute('aria-expanded') === 'true';
+      setTimeExpanded(!expanded);
+    });
+    document.getElementById('eaten-time').addEventListener('input', updateTimeToggleLabel);
+
+    initLayout({ activeId: 'calorie' });
+    Meals.refreshIcons();
+    mealList.reload();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => reg.update())
+          .catch((err) => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ประวัติ - Calorie Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#059669">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/site.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js/config.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/meals.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <p class="app-header__eyebrow">ค้นหาย้อนหลัง</p>
+      <h1 class="app-header__title">ประวัติการกิน</h1>
+    </header>
+
+    <section class="day-summary" aria-live="polite">
+      <p class="day-summary__label">แคลอรี่ในช่วงที่เลือก</p>
+      <p class="day-summary__value">
+        <span id="range-total">0</span><span class="day-summary__unit">kcal</span>
+      </p>
+      <p class="day-summary__meta"><span id="range-count">0</span> มื้อ</p>
+    </section>
+
+    <main class="app-main">
+      <div class="app-panel">
+        <section class="app-section" aria-labelledby="filter-toggle-label">
+          <div class="app-disclosure">
+            <button
+              type="button"
+              id="filter-toggle"
+              class="app-disclosure__toggle"
+              aria-expanded="false"
+              aria-controls="filter-panel"
+            >
+              <span class="app-disclosure__lead">
+                <i data-lucide="calendar-range" class="app-disclosure__icon" aria-hidden="true"></i>
+                <span id="filter-toggle-label">ค้นหาช่วงวันที่</span>
+                <span class="app-disclosure__optional">MTD</span>
+              </span>
+              <i data-lucide="chevron-down" class="app-disclosure__chevron" aria-hidden="true"></i>
+            </button>
+            <div id="filter-panel" class="app-disclosure__panel" hidden>
+              <div class="app-disclosure__inner">
+                <form class="date-range date-range--nested" id="range-form">
+                  <div class="date-range__fields">
+                    <div class="app-field">
+                      <label class="app-label" for="range-from">จากวันที่</label>
+                      <input id="range-from" class="app-input" type="date" required>
+                    </div>
+                    <div class="app-field">
+                      <label class="app-label" for="range-to">ถึงวันที่</label>
+                      <input id="range-to" class="app-input" type="date" required>
+                    </div>
+                  </div>
+                  <div class="date-range__actions">
+                    <button type="button" id="range-mtd" class="app-btn app-btn--ghost">MTD</button>
+                    <button type="submit" class="app-btn">ค้นหา</button>
+                  </div>
+                  <p id="range-hint" class="app-hint" aria-live="polite"></p>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="app-section" aria-labelledby="list-title">
+          <div class="list-toolbar">
+            <h2 class="app-section__title" id="list-title">รายการประวัติ</h2>
+            <div class="sort-control">
+              <label class="sort-control__label" for="sort-by">เรียง</label>
+              <select id="sort-by" class="sort-control__select" aria-label="เรียงลำดับประวัติ">
+                <option value="time_desc" selected>เวลาใหม่ → เก่า</option>
+                <option value="time_asc">เวลาเก่า → ใหม่</option>
+                <option value="cal_desc">แคลอรี่มาก → น้อย</option>
+                <option value="cal_asc">แคลอรี่น้อย → มาก</option>
+              </select>
+            </div>
+          </div>
+          <div id="list" class="app-list" aria-live="polite"></div>
+          <div id="empty-state" class="app-empty" hidden>
+            <i data-lucide="history" class="app-empty__icon" aria-hidden="true"></i>
+            <p class="app-empty__title">ไม่พบมื้อในช่วงนี้</p>
+            <p class="app-empty__text">ลองเปลี่ยนช่วงวันที่ หรือกลับไปบันทึกมื้อใหม่</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div id="bottom-nav"></div>
+  </div>
+
+  <script>
+    const supabaseClient = Meals.createSupabaseClient();
+    const fromInput = document.getElementById('range-from');
+    const toInput = document.getElementById('range-to');
+    const filterToggle = document.getElementById('filter-toggle');
+    const filterPanel = document.getElementById('filter-panel');
+    const filterLabel = document.getElementById('filter-toggle-label');
+    const filterBadge = filterToggle.querySelector('.app-disclosure__optional');
+
+    function formatRangeShort(fromValue, toValue) {
+      try {
+        const from = new Date(`${fromValue}T00:00:00`);
+        const to = new Date(`${toValue}T00:00:00`);
+        const opts = { day: 'numeric', month: 'short' };
+        return `${from.toLocaleDateString('th-TH', opts)} – ${to.toLocaleDateString('th-TH', opts)}`;
+      } catch {
+        return 'ช่วงวันที่';
+      }
+    }
+
+    function updateFilterToggleLabel() {
+      const expanded = filterToggle.getAttribute('aria-expanded') === 'true';
+      if (fromInput.value && toInput.value) {
+        filterLabel.textContent = formatRangeShort(fromInput.value, toInput.value);
+        filterBadge.textContent = 'MTD/ค้นหา';
+      } else if (expanded) {
+        filterLabel.textContent = 'เลือกช่วงวันที่';
+      } else {
+        filterLabel.textContent = 'ค้นหาช่วงวันที่';
+      }
+    }
+
+    function setFilterExpanded(expanded) {
+      filterToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      filterPanel.hidden = !expanded;
+      filterPanel.classList.toggle('is-open', expanded);
+      updateFilterToggleLabel();
+      Meals.refreshIcons();
+      if (expanded) {
+        requestAnimationFrame(() => fromInput.focus());
+      }
+    }
+
+    function applyMtdToInputs() {
+      const mtd = Meals.getMtdRange();
+      fromInput.value = Meals.toDateInputValue(mtd.start);
+      toInput.value = Meals.toDateInputValue(new Date());
+      updateFilterToggleLabel();
+    }
+
+    function getSelectedRange() {
+      return Meals.rangeFromDateInputs(fromInput.value, toInput.value);
+    }
+
+    applyMtdToInputs();
+
+    const mealList = Meals.createMealList({
+      supabaseClient,
+      listEl: '#list',
+      emptyEl: '#empty-state',
+      sortEl: '#sort-by',
+      statusEl: '#range-hint',
+      summary: { totalEl: '#range-total', countEl: '#range-count' },
+      getRange: getSelectedRange,
+      metaMode: 'datetime',
+      defaultSort: 'time_desc',
+    });
+
+    filterToggle.addEventListener('click', () => {
+      const expanded = filterToggle.getAttribute('aria-expanded') === 'true';
+      setFilterExpanded(!expanded);
+    });
+
+    document.getElementById('range-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!getSelectedRange()) {
+        mealList.status('กรุณาเลือกช่วงวันที่ให้ถูกต้อง', 'is-error');
+        return;
+      }
+      mealList.status('');
+      updateFilterToggleLabel();
+      mealList.reload();
+      setFilterExpanded(false);
+    });
+
+    document.getElementById('range-mtd').addEventListener('click', () => {
+      applyMtdToInputs();
+      mealList.status('ตั้งเป็นเดือนนี้ถึงวันนี้ (MTD)', 'is-ok');
+      mealList.reload();
+    });
+
+    fromInput.addEventListener('change', updateFilterToggleLabel);
+    toInput.addEventListener('change', updateFilterToggleLabel);
+
+    initLayout({ activeId: 'history' });
+    Meals.refreshIcons();
+    mealList.reload();
+  </script>
+</body>
+</html>

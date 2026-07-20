@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Wellness — ศูนย์รวมแอปสุขภาพ</title>
+  <meta name="description" content="ศูนย์รวมแอป Wellness เรียบง่าย ดูแลสุขภาพทีละวัน">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Barlow:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/hub.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="hub">
+  <div class="hub-shell">
+    <header class="hub-header">
+      <p class="hub-header__eyebrow">Wellness</p>
+      <h1 class="hub-header__title">ศูนย์รวมแอปสุขภาพ</h1>
+      <p class="hub-header__lead">เครื่องมือเรียบง่าย ช่วยดูแลตัวเองทีละวัน — เลือกแอปที่ต้องการใช้งาน</p>
+    </header>
+
+    <main>
+      <section class="hub-section" aria-labelledby="apps-title">
+        <h2 class="hub-section__title" id="apps-title">แอปทั้งหมด</h2>
+        <ul class="hub-apps">
+          <li>
+            <a href="calorie.html" class="hub-app-card">
+              <span class="hub-app-card__icon" aria-hidden="true">
+                <i data-lucide="utensils" class="hub-app-card__icon-svg"></i>
+              </span>
+              <span class="hub-app-card__body">
+                <span class="hub-app-card__name">Calorie Counter</span>
+                <p class="hub-app-card__desc">บันทึกมื้ออาหาร ติดตามแคลอรี่รายวัน และดูแนวโน้มการกิน</p>
+              </span>
+              <i data-lucide="chevron-right" class="hub-app-card__chevron" aria-hidden="true"></i>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="hub-footer">
+      <p class="hub-footer__text">แอปเพิ่มเติมกำลังพัฒนา — เริ่มจาก Calorie Counter ได้เลย</p>
+    </footer>
+  </div>
+
+  <script>
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -1,9 +1,11 @@
-const CACHE_NAME = 'calorie-tracker-v15';
+const CACHE_NAME = 'calorie-tracker-v16';
 const ASSETS = [
+  './app.html',
   './calorie.html',
   './history.html',
   './dashboard.html',
   './css/site.css',
+  './css/hub.css',
   './js/layout.js',
   './js/config.js',
   './js/meals.js',

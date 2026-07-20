@@ -349,6 +349,51 @@ button:active:not(:disabled) {
   opacity: 0.8;
 }
 
+/* History banner — match dashboard insight-banner height */
+.day-summary--history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.35em;
+  padding: var(--space-5) var(--space-4);
+}
+
+.day-summary--history .day-summary__label {
+  flex: 0 0 100%;
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.day-summary--history .day-summary__value {
+  margin: 0;
+  font-family: var(--font-family);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+.day-summary--history .day-summary__unit {
+  font-size: 1em;
+  font-weight: 600;
+  margin-left: 2px;
+}
+
+.day-summary--history .day-summary__meta {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.day-summary--history .day-summary__meta::before {
+  content: '· ';
+  opacity: 0.75;
+}
+
 /* —— Meal tags —— */
 .meal-tag-picker {
   display: grid;
@@ -1396,6 +1441,11 @@ button:active:not(:disabled) {
 
   .day-summary--compact .day-summary__value {
     font-size: 2.25rem;
+  }
+
+  .day-summary--history .day-summary__value,
+  .day-summary--history .day-summary__meta {
+    font-size: 1rem;
   }
 
   .app-panel {

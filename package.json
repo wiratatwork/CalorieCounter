@@ -4,8 +4,17 @@
   "type": "module",
   "scripts": {
     "env": "node scripts/generate-config.mjs",
+    "env:e2e": "node scripts/generate-config.mjs --e2e",
     "postinstall": "node scripts/generate-config.mjs",
+    "e2e:run": "playwright test",
+    "e2e": "npm run env:e2e && playwright test && npm run e2e:cleanup",
+    "e2e:cleanup": "node scripts/cleanup-e2e-data.mjs",
     "functions:deploy": "npx supabase functions deploy estimate-calories",
     "functions:secrets": "node -e \"console.log('Run:\\nnpx supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=gemini-3.1-flash-lite')\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0",
+    "@supabase/supabase-js": "^2.49.0",
+    "serve": "^14.2.4"
   }
 }

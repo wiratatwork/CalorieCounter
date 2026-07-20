@@ -266,7 +266,6 @@
       const foodInput = document.getElementById('food');
       const calInput = document.getElementById('cal');
       const timeInput = document.getElementById('eaten-time');
-      const timeExpanded = document.getElementById('time-toggle').getAttribute('aria-expanded') === 'true';
       const saveBtn = document.getElementById('save-btn');
       const food = foodInput.value.trim();
       const cal = parseInt(calInput.value, 10);
@@ -285,7 +284,7 @@
         calories: cal,
         meal_tag: Meals.getSelectedMealTag(document.getElementById('meal-tag-picker'), 'add-meal-tag'),
       };
-      if (timeExpanded && timeInput.value) {
+      if (timeInput.value) {
         const createdAt = Meals.buildCreatedAtFromTime(timeInput.value);
         if (createdAt) payload.created_at = createdAt;
       }

@@ -13,6 +13,28 @@
     { id: 'snack', label: 'ของว่าง' },
   ];
 
+  function isE2eMode() {
+    return global.APP_CONFIG?.e2eMode === true;
+  }
+
+  function isMissingColumnError(error, column) {
+    const msg = String(error?.message || error?.details || '').toLowerCase();
+    return msg.includes(String(column).toLowerCase()) || error?.code === 'PGRST204';
+  }
+
+  function scopeTestRows(query) {
+    return query.eq('is_test', isE2eMode());
+  }
+
+  function withTestFlag(payload) {
+    return { ...payload, is_test: isE2eMode() };
+  }
+
+  function stripTestFlag(payload) {
+    const { is_test, ...rest } = payload;
+    return rest;
+  }
+
   function getDailyGoal() {
     const saved = parseInt(global.localStorage?.getItem(GOAL_KEY), 10);
     return !isNaN(saved) && saved >= 800 ? saved : DEFAULT_GOAL;
@@ -427,12 +449,23 @@
         return;
       }
 
-      const { data, error } = await options.supabaseClient
+      let query = options.supabaseClient
         .from(TABLE)
         .select('*')
         .gte('created_at', range.start.toISOString())
         .lt('created_at', range.end.toISOString())
         .order('created_at', { ascending: false });
+      query = scopeTestRows(query);
+
+      let { data, error } = await query;
+      if (error && isMissingColumnError(error, 'is_test')) {
+        ({ data, error } = await options.supabaseClient
+          .from(TABLE)
+          .select('*')
+          .gte('created_at', range.start.toISOString())
+          .lt('created_at', range.end.toISOString())
+          .order('created_at', { ascending: false }));
+      }
 
       if (error) {
         console.error(error);
@@ -501,7 +534,12 @@
     }
 
     async function applyDelete(id) {
-      const { error } = await options.supabaseClient.from(TABLE).delete().eq('id', id);
+      let query = options.supabaseClient.from(TABLE).delete().eq('id', id);
+      query = scopeTestRows(query);
+      let { error } = await query;
+      if (error && isMissingColumnError(error, 'is_test')) {
+        ({ error } = await options.supabaseClient.from(TABLE).delete().eq('id', id));
+      }
       if (error) {
         console.error(error);
         status('ลบไม่สำเร็จ ลองอีกครั้ง', 'is-error');
@@ -520,14 +558,29 @@
         created_at: payload.created_at,
         meal_tag: payload.meal_tag,
       };
-      let { error } = await options.supabaseClient
+      let updateQuery = options.supabaseClient
         .from(TABLE)
         .update(updatePayload)
         .eq('id', payload.id);
+      updateQuery = scopeTestRows(updateQuery);
+      let { error } = await updateQuery;
 
       if (error && updatePayload.meal_tag) {
         const { meal_tag, ...fallback } = updatePayload;
-        ({ error } = await options.supabaseClient.from(TABLE).update(fallback).eq('id', payload.id));
+        let fallbackQuery = options.supabaseClient.from(TABLE).update(fallback).eq('id', payload.id);
+        fallbackQuery = scopeTestRows(fallbackQuery);
+        ({ error } = await fallbackQuery);
+      }
+
+      if (error && isMissingColumnError(error, 'is_test')) {
+        ({ error } = await options.supabaseClient
+          .from(TABLE)
+          .update(updatePayload)
+          .eq('id', payload.id));
+        if (error && updatePayload.meal_tag) {
+          const { meal_tag, ...fallback } = updatePayload;
+          ({ error } = await options.supabaseClient.from(TABLE).update(fallback).eq('id', payload.id));
+        }
       }
 
       if (error) {
@@ -544,10 +597,21 @@
     }
 
     async function insert(payload) {
-      let { error } = await options.supabaseClient.from(TABLE).insert(payload);
-      if (error && payload.meal_tag) {
-        const { meal_tag, ...fallback } = payload;
+      let insertPayload = withTestFlag(payload);
+      let { error } = await options.supabaseClient.from(TABLE).insert(insertPayload);
+
+      if (error && insertPayload.meal_tag) {
+        const { meal_tag, ...fallback } = insertPayload;
         ({ error } = await options.supabaseClient.from(TABLE).insert(fallback));
+      }
+
+      if (error && isMissingColumnError(error, 'is_test')) {
+        const withoutTest = stripTestFlag(insertPayload);
+        ({ error } = await options.supabaseClient.from(TABLE).insert(withoutTest));
+        if (error && withoutTest.meal_tag) {
+          const { meal_tag, ...fallback } = withoutTest;
+          ({ error } = await options.supabaseClient.from(TABLE).insert(fallback));
+        }
       }
       if (error) {
         console.error(error);
@@ -661,12 +725,23 @@
   }
 
   async function fetchMealsInRange(supabaseClient, start, end) {
-    const { data, error } = await supabaseClient
+    let query = supabaseClient
       .from(TABLE)
       .select('*')
       .gte('created_at', start.toISOString())
       .lt('created_at', end.toISOString())
       .order('created_at', { ascending: true });
+    query = scopeTestRows(query);
+
+    let { data, error } = await query;
+    if (error && isMissingColumnError(error, 'is_test')) {
+      ({ data, error } = await supabaseClient
+        .from(TABLE)
+        .select('*')
+        .gte('created_at', start.toISOString())
+        .lt('created_at', end.toISOString())
+        .order('created_at', { ascending: true }));
+    }
 
     if (error) throw error;
     return data || [];
@@ -731,6 +806,7 @@
     fetchMealsInRange,
     estimateCalories,
     buildDailySeries,
+    isE2eMode,
     getDailyGoal,
     setDailyGoal,
     MEAL_TAGS,

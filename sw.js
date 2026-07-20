@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calorie-tracker-v22';
+const CACHE_NAME = 'calorie-tracker-v25';
 const ASSETS = [
   './app.html',
   './calorie.html',

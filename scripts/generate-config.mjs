@@ -48,11 +48,14 @@ if (missing.length) {
   process.exit(1);
 }
 
+const e2eMode = process.env.E2E_MODE === '1' || process.argv.includes('--e2e');
+
 const contents = `/* AUTO-GENERATED — อย่าแก้โดยตรง (รัน npm run env) */
 /* Gemini key อยู่ที่ Supabase Edge Function secrets เท่านั้น */
 window.APP_CONFIG = {
   supabaseUrl: ${JSON.stringify(env.SUPABASE_URL)},
   supabaseAnonKey: ${JSON.stringify(env.SUPABASE_ANON_KEY)},
+  e2eMode: ${e2eMode},
 };
 `;
 

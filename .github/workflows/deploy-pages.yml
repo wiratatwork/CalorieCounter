@@ -42,9 +42,8 @@ jobs:
           mkdir -p _site
           touch _site/.nojekyll
           cp index.html app.html calorie.html history.html dashboard.html manifest.json sw.js _site/
-          cp -r css js _site/
-          if [ -f icon-192.png ]; then cp icon-192.png _site/; fi
-          if [ -f icon-512.png ]; then cp icon-512.png _site/; fi
+          cp -r css js icons _site/
+          cp icons/favicon.ico _site/favicon.ico
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

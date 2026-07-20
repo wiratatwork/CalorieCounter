@@ -13,11 +13,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/site.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="js/config.js"></script>
   <script src="js/layout.js"></script>
   <script src="js/meals.js"></script>
+  <script src="js/dashboard-charts.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -78,7 +79,7 @@
           <h2 class="app-section__title" id="trend-title">แนวโน้มแคลอรี่รายวัน</h2>
           <p class="app-section__lead">เส้นทึบ = ที่กินจริง · เส้นประ = เป้า</p>
           <div class="chart-panel">
-            <canvas id="trend-chart" aria-label="กราฟแนวโน้มแคลอรี่รายวัน" role="img"></canvas>
+            <div id="trend-chart" class="apex-chart-host" role="img" aria-label="กราฟแนวโน้มแคลอรี่รายวัน"></div>
           </div>
           <details class="chart-a11y">
             <summary>ดูตารางข้อมูล</summary>
@@ -97,7 +98,7 @@
           <h2 class="app-section__title" id="bar-title">เปรียบเทียบรายวัน</h2>
           <p class="app-section__lead">แท่งเขียว = ไม่เกินเป้า · แท่งส้ม = เกินเป้า</p>
           <div class="chart-panel">
-            <canvas id="bar-chart" aria-label="กราฟแท่งแคลอรี่รายวัน" role="img"></canvas>
+            <div id="bar-chart" class="apex-chart-host" role="img" aria-label="กราฟแท่งแคลอรี่รายวัน"></div>
           </div>
         </section>
 
@@ -125,10 +126,7 @@
     const supabaseClient = Meals.createSupabaseClient();
     let periodDays = 7;
     let dailySeries = [];
-    let trendChart = null;
-    let barChart = null;
-
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let loadGeneration = 0;
 
     function getGoal() {
       const saved = parseInt(localStorage.getItem(GOAL_KEY), 10);
@@ -231,140 +229,19 @@
         .join('');
     }
 
-    function chartDefaults() {
-      Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
-      Chart.defaults.color = '#475569';
-      Chart.defaults.animation = reduceMotion ? false : { duration: 360, easing: 'easeOutQuart' };
+    function renderCharts(series, goal) {
+      if (!series.some((d) => d.meals > 0)) return;
+      const formatLabel = shortDayLabel;
+      DashboardCharts.renderTrend(document.getElementById('trend-chart'), series, goal, formatLabel);
+      DashboardCharts.renderBar(document.getElementById('bar-chart'), series, goal, formatLabel);
     }
 
-    function renderTrendChart(series, goal) {
-      const labels = series.map((d) => shortDayLabel(d.date));
-      const values = series.map((d) => d.calories);
-      const goals = series.map(() => goal);
-      const ctx = document.getElementById('trend-chart');
-
-      if (trendChart) trendChart.destroy();
-
-      trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'ที่กิน (kcal)',
-              data: values,
-              borderColor: '#059669',
-              backgroundColor: 'rgba(5, 150, 105, 0.16)',
-              borderWidth: 2.5,
-              fill: true,
-              tension: 0.3,
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              pointBackgroundColor: '#059669',
-            },
-            {
-              label: 'เป้า (เส้นประ)',
-              data: goals,
-              borderColor: '#d97706',
-              borderWidth: 2,
-              borderDash: [6, 5],
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 0,
-              tension: 0,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { boxWidth: 12, usePointStyle: true, padding: 16 },
-            },
-            tooltip: {
-              callbacks: {
-                afterBody(items) {
-                  const i = items[0]?.dataIndex;
-                  if (i == null) return '';
-                  const day = series[i];
-                  return `มื้อ ${day.meals} · เป้า ${goal.toLocaleString('th-TH')}`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { maxRotation: 0, autoSkipPadding: 8 },
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: '#e1f2ed' },
-              ticks: {
-                callback: (v) => Number(v).toLocaleString('th-TH'),
-              },
-            },
-          },
-        },
-      });
-    }
-
-    function renderBarChart(series, goal) {
-      const recent = series.slice(-Math.min(14, series.length));
-      const labels = recent.map((d) => shortDayLabel(d.date));
-      const values = recent.map((d) => d.calories);
-      const colors = recent.map((d) =>
-        d.calories > goal ? '#d97706' : '#10b981'
-      );
-      const ctx = document.getElementById('bar-chart');
-
-      if (barChart) barChart.destroy();
-
-      barChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'kcal / วัน',
-              data: values,
-              backgroundColor: colors,
-              borderWidth: 0,
-              borderSkipped: false,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label(ctx) {
-                  const v = ctx.parsed.y || 0;
-                  const mark = v > goal ? ' (เกินเป้า)' : ' (ไม่เกินเป้า)';
-                  return `${v.toLocaleString('th-TH')} kcal${v ? mark : ''}`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxRotation: 0 } },
-            y: {
-              beginAtZero: true,
-              grid: { color: '#e1f2ed' },
-              ticks: { callback: (v) => Number(v).toLocaleString('th-TH') },
-            },
-          },
-        },
-      });
+    function clearCharts() {
+      DashboardCharts.clear();
     }
 
     async function loadDashboard() {
+      const generation = ++loadGeneration;
       const goal = getGoal();
       document.getElementById('daily-goal').value = String(goal);
 
@@ -376,9 +253,12 @@
         meals = await Meals.fetchMealsInRange(supabaseClient, start, end);
       } catch (err) {
         console.error(err);
+        if (generation !== loadGeneration) return;
         document.getElementById('insight-text').textContent = 'โหลดข้อมูลไม่สำเร็จ ลองรีเฟรชอีกครั้ง';
         return;
       }
+
+      if (generation !== loadGeneration) return;
 
       dailySeries = Meals.buildDailySeries(meals, start, end);
       const hasData = dailySeries.some((d) => d.meals > 0);
@@ -389,15 +269,9 @@
       buildInsight(dailySeries, goal);
       fillTable(dailySeries, goal);
       if (hasData) {
-        renderTrendChart(dailySeries, goal);
-        renderBarChart(dailySeries, goal);
-      } else if (trendChart) {
-        trendChart.destroy();
-        trendChart = null;
-        if (barChart) {
-          barChart.destroy();
-          barChart = null;
-        }
+        requestAnimationFrame(() => renderCharts(dailySeries, goal));
+      } else {
+        clearCharts();
       }
       Meals.refreshIcons();
     }
@@ -424,11 +298,9 @@
       updateKpis(dailySeries, goal);
       buildInsight(dailySeries, goal);
       fillTable(dailySeries, goal);
-      renderTrendChart(dailySeries, goal);
-      renderBarChart(dailySeries, goal);
+      renderCharts(dailySeries, goal);
     });
 
-    chartDefaults();
     initLayout({ activeId: 'dashboard' });
     Meals.refreshIcons();
     loadDashboard();

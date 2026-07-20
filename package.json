@@ -1,0 +1,11 @@
+{
+  "name": "calorie-counter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "env": "node scripts/generate-config.mjs",
+    "postinstall": "node scripts/generate-config.mjs",
+    "functions:deploy": "npx supabase functions deploy estimate-calories",
+    "functions:secrets": "node -e \"console.log('Run:\\nnpx supabase secrets set GEMINI_API_KEY=... GEMINI_MODEL=gemini-3.1-flash-lite')\""
+  }
+}

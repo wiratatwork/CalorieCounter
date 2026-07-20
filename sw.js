@@ -1,4 +1,4 @@
-const CACHE_NAME = 'calorie-tracker-v13';
+const CACHE_NAME = 'calorie-tracker-v15';
 const ASSETS = [
   './calorie.html',
   './history.html',

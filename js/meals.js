@@ -531,6 +531,29 @@
     return data || [];
   }
 
+  /**
+   * เรียก Edge Function estimate-calories (Gemini key อยู่ฝั่ง server)
+   */
+  async function estimateCalories(supabaseClient, foodName) {
+    const name = String(foodName || '').trim();
+    if (!name) throw new Error('food_name is required');
+
+    const { data, error } = await supabaseClient.functions.invoke('estimate-calories', {
+      body: { food_name: name },
+    });
+
+    if (error) {
+      const message = error.message || 'Edge Function error';
+      throw new Error(message);
+    }
+
+    const calories = parseInt(data?.calories, 10);
+    if (Number.isNaN(calories) || calories < 0) {
+      throw new Error('ไม่สามารถอ่านค่าแคลอรี่จาก AI ได้');
+    }
+    return calories;
+  }
+
   function dateKeyLocal(date) {
     return toDateInputValue(date);
   }
@@ -565,6 +588,7 @@
     createSupabaseClient,
     ensureMealDialogs,
     fetchMealsInRange,
+    estimateCalories,
     buildDailySeries,
     startOfDay,
     addDays,

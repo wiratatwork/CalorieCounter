@@ -18,16 +18,16 @@
   --font-display: 'Barlow Condensed', var(--font-thai), system-ui, sans-serif;
   --font-family: 'Barlow', var(--font-thai), system-ui, sans-serif;
   --app-max: 430px;
-  --header-h: 64px;
-  --tabbar-h: 64px;
+  --header-h: 72px;
+  --tabbar-h: 68px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 20px;
+  --space-5: 28px;
+  --space-6: 40px;
   --radius: 0;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --z-header: 40;
@@ -50,7 +50,7 @@ body {
   margin: 0;
   color: var(--color-text-main);
   background: #d1fae5;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -58,7 +58,7 @@ body {
 
 /* Thai glyphs use Anuphan via fallback; keep Latin metrics snappy */
 :lang(th) {
-  line-height: 1.55;
+  line-height: 1.65;
   letter-spacing: 0;
   word-break: break-word;
 }
@@ -106,8 +106,8 @@ button:active:not(:disabled) {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 2px;
-  padding: calc(10px + var(--safe-top)) var(--space-4) 12px;
+  gap: 4px;
+  padding: calc(14px + var(--safe-top)) var(--space-4) 16px;
   background: var(--color-surface);
   border-bottom: 2px solid var(--color-primary);
 }
@@ -134,7 +134,7 @@ button:active:not(:disabled) {
 .app-main {
   flex: 1;
   overflow-y: auto;
-  padding: 0 0 calc(var(--tabbar-h) + var(--safe-bottom) + 20px);
+  padding: 0 0 calc(var(--tabbar-h) + var(--safe-bottom) + 28px);
   overscroll-behavior: contain;
 }
 
@@ -154,7 +154,7 @@ button:active:not(:disabled) {
   align-items: stretch;
   justify-content: space-around;
   height: calc(var(--tabbar-h) + var(--safe-bottom));
-  padding: 6px 8px var(--safe-bottom);
+  padding: 8px 10px var(--safe-bottom);
   background: var(--color-surface);
   border-top: 2px solid var(--color-border);
 }
@@ -165,10 +165,10 @@ button:active:not(:disabled) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
   min-height: 48px;
-  padding: 6px 4px;
+  padding: 8px 6px;
   text-decoration: none;
   color: var(--color-text-muted);
   transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
@@ -201,9 +201,9 @@ button:active:not(:disabled) {
 .day-summary {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-3) var(--space-4);
   align-items: end;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--space-4) calc(var(--space-5) + 4px);
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -246,14 +246,14 @@ button:active:not(:disabled) {
 .app-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  padding: var(--space-4);
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-4);
 }
 
 .app-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .app-section__title {
@@ -266,10 +266,10 @@ button:active:not(:disabled) {
 }
 
 .app-section__lead {
-  margin: -4px 0 0;
+  margin: -2px 0 0;
   font-size: 0.9375rem;
   color: var(--color-text-muted);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 /* —— Date range filter —— */
@@ -308,7 +308,7 @@ button:active:not(:disabled) {
 
 /* —— Dashboard —— */
 .insight-banner {
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-4);
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -382,11 +382,11 @@ button:active:not(:disabled) {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .kpi-card {
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
   text-align: center;
@@ -418,14 +418,14 @@ button:active:not(:disabled) {
 }
 
 .chart-panel {
-  height: 220px;
-  padding: var(--space-3);
+  height: 240px;
+  padding: var(--space-4);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
 }
 
 .chart-a11y {
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
   font-size: 0.875rem;
   color: var(--color-text-muted);
 }
@@ -483,8 +483,8 @@ button:active:not(:disabled) {
 .app-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
   background: var(--color-surface);
   border: 2px solid var(--color-border);
 }
@@ -492,7 +492,7 @@ button:active:not(:disabled) {
 .app-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .app-label {
@@ -505,7 +505,7 @@ button:active:not(:disabled) {
 .app-input {
   width: 100%;
   min-height: 48px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   font-size: 1rem;
   font-family: inherit;
   color: var(--color-text-main);
@@ -528,7 +528,7 @@ button:active:not(:disabled) {
 .app-cal-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: var(--space-2);
+  gap: var(--space-3);
   align-items: stretch;
 }
 
@@ -540,12 +540,12 @@ button:active:not(:disabled) {
 
 .app-disclosure__toggle {
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: 10px 12px;
+  gap: var(--space-3);
+  padding: 14px 16px;
   background: transparent;
   border: none;
   color: var(--color-text-main);
@@ -624,13 +624,13 @@ button:active:not(:disabled) {
 }
 
 .app-disclosure__panel.is-open .app-disclosure__inner {
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .app-btn {
   width: 100%;
-  min-height: 48px;
-  padding: 12px 16px;
+  min-height: 50px;
+  padding: 14px 18px;
   font-size: 1rem;
   font-weight: 700;
   color: var(--color-on-primary);
@@ -737,8 +737,8 @@ button:active:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 56px;
-  padding: 14px var(--space-4);
+  min-height: 64px;
+  padding: 16px var(--space-4);
   border-bottom: 1px solid var(--color-border);
   animation: app-fade-up 200ms var(--ease-out) both;
 }
@@ -765,7 +765,7 @@ button:active:not(:disabled) {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .app-list-item__name {
@@ -792,7 +792,7 @@ button:active:not(:disabled) {
 .app-list-item__actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -828,14 +828,15 @@ button:active:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-4);
   flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 .sort-control {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -889,8 +890,8 @@ button:active:not(:disabled) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: 12px 12px 12px 16px;
+  gap: var(--space-3);
+  padding: 16px 14px 16px 20px;
   border-bottom: 2px solid var(--color-border);
 }
 
@@ -904,26 +905,26 @@ button:active:not(:disabled) {
 .app-dialog__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
 }
 
 .app-dialog__message {
   margin: 0;
   font-size: 0.975rem;
-  line-height: 1.45;
+  line-height: 1.55;
   color: var(--color-text-main);
 }
 
 .app-dialog__footer {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  padding: 0 var(--space-4) var(--space-4);
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-5);
 }
 
 .app-dialog__footer--flush {
-  padding: var(--space-2) 0 0;
+  padding: var(--space-3) 0 0;
 }
 
 .app-list-item--stack {
@@ -947,8 +948,8 @@ button:active:not(:disabled) {
   display: none;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
+  gap: var(--space-3);
+  padding: calc(var(--space-6) + 8px) var(--space-5);
   text-align: center;
   background: var(--color-surface);
   border: 2px dashed var(--color-border);
